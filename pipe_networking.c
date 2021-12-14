@@ -9,30 +9,29 @@
   returns the file descriptor for the upstream pipe.
   =========================*/
 int server_handshake(int *to_client) {
-  int from_client = 0;
   char line[100];
-  int piper = open("mario", O_RDONLY);
-  if (piper == -1){
-	mkfifo("mario", 0644);
-	piper = open("mario", O_RDONLY);
+  int from_client = open(WKP, O_RDONLY);
+  if (from_client == -1){
+	mkfifo(WKP, 0644);
+	from_client = open(WKP, O_RDONLY);
   }
-  read(piper, line, 100);
+  read(from_client, line, 100);
   sscanf(line, "%s\n", line);
   printf("Message \"%s\" received.\n", line);
-  //remove("mario");
-  printf("[%s]\n", line);
-  int pipew = open(line, O_WRONLY);
-  if (pipew == -1){
+  remove(WKP);
+  *to_client = open(line, O_WRONLY);
+  if (*to_client == -1){
   	mkfifo(line, 0644);
-  	pipew = open(line, O_WRONLY);
+  	*to_client = open(line, O_WRONLY);
   }
   strcat(line, "1");
-  write(pipew, line, 100);
-  printf("Wrote message to secret pipe.\n");
-  //remove(line);
-  read(piper, line, 100);
+  write(*to_client, line, 100);
+  printf("Wrote message \"%s\" to secret pipe.\n", line);
+  remove(ACK);
+  read(from_client, line, 100);
   sscanf(line, "%s\n", line);
   printf("Message \"%s\" received.\n", line);
+  printf("Connection established\n");
   return from_client;
 }
 
@@ -45,27 +44,27 @@ int server_handshake(int *to_client) {
   returns the file descriptor for the downstream pipe.
   =========================*/
 int client_handshake(int *to_server) {
-  int from_server = 0;
-  char line[100] = "luigi";
-  int pipew = open("mario", O_WRONLY);
-  if (pipew == -1){
-	mkfifo("mario", 0644);
-	pipew = open("mario", O_WRONLY);
+  char line[100] = ACK;
+  *to_server = open(WKP, O_WRONLY);
+  if (*to_server == -1){
+    mkfifo(WKP, 0644);
+    *to_server = open(WKP, O_WRONLY);
   }
-  write(pipew, line, 100);
-  printf("Wrote message to well-known pipe.\n");
-  //remove("mario");
-  int piper = ("luigi", O_RDONLY);
-  if (piper == -1){
-	mkfifo("luigi", 0644);
-	piper = open("luigi", O_RDONLY);
+  write(*to_server, line, 100);
+  printf("Wrote message \"%s\" to well-known pipe.\n", line);
+  remove(WKP);
+  int from_server = open(ACK, O_RDONLY);
+  if (from_server == -1){
+	   mkfifo(ACK, 0644);
+     from_server = open(ACK, O_RDONLY);
   }
-  read(piper, line, 100);
+  read(from_server, line, 100);
   sscanf(line, "%s\n", line);
   printf("Message \"%s\" received.\n", line);
-  //remove("luigi");
+  remove(ACK);
   strcat(line, "2");
-  write(pipew, line, 100);
-  printf("Wrote message to well-known pipe.\n");
+  write(*to_server, line, 100);
+  printf("Wrote message \"%s\" to well-known pipe.\n", line);
+  printf("Connection established\n");
   return from_server;
 }
